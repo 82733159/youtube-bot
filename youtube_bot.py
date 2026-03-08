@@ -39,28 +39,11 @@ DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 #
 # Update yt-dlp first:  pip install -U yt-dlp
 
-COOKIES_FILE = Path(__file__).parent / "cookies.txt"   # fallback
-
-# yt-dlp stores the OAuth2 token in its own cache directory automatically
-# (~/.cache/yt-dlp/ on Linux). We just need to pass --username oauth2.
-
-def _has_oauth2_token() -> bool:
-    """Check if yt-dlp has a cached OAuth2 token, safely."""
-    cache_dirs = [
-        Path.home() / ".cache" / "yt-dlp",
-        Path.home() / ".cache" / "youtube-dl",
-    ]
-    for d in cache_dirs:
-        try:
-            if d.exists() and any(d.rglob("*oauth2*")):
-                return True
-        except PermissionError:
-            pass
-    return False
+COOKIES_FILE = Path(__file__).parent / "cookies.txt"
 
 
 def get_ydl_base_opts() -> dict:
-    """Return base yt-dlp options with the best available auth method."""
+    """Return base yt-dlp options using cookies.txt (auto-synced from phone)."""
     opts: dict = {
         "quiet": True,
         "no_warnings": True,
@@ -72,15 +55,11 @@ def get_ydl_base_opts() -> dict:
             )
         },
     }
-    if _has_oauth2_token():
-        opts["username"] = "oauth2"
-        opts["password"] = ""
-        log.info("Using yt-dlp built-in OAuth2 token.")
-    elif COOKIES_FILE.exists():
+    if COOKIES_FILE.exists():
         opts["cookiefile"] = str(COOKIES_FILE)
         log.info("Using cookies.txt for auth.")
     else:
-        log.warning("No auth — YouTube may block server IPs. Send /login.")
+        log.warning("No cookies.txt found — YouTube may block requests.")
     return opts
 
 
